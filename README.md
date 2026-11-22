@@ -1,124 +1,103 @@
-# ROS 2 Tutorial
+# Tutoriel ROS 2
 
-Bienvenue dans ce tutorial **ROS 2** ! Ce dépôt contient tout les informations nécessaires pour réaliser un projet sous ROS 2.
+Ce dépôt contient un cours pratique sur **ROS 2 Jazzy Jalisco**, orienté vers les systèmes autonomes. L'environnement de travail est fourni sous forme de conteneur Docker ouvert dans VS Code : aucune installation de ROS 2 sur la machine hôte n'est nécessaire.
 
 ---
 
 ## Objectifs du cours
 
-- **Apprendre les bases de ROS 2** : exploration des nœuds, des topics et des messages.
-- **Comprendre les concepts avancés** : gestion des services, actions, et paramètres.
-- **Développer un projet final** : mise en œuvre d'une navigation autonome.
+- **Découvrir ROS 2 en tant qu'utilisateur** : graphe de calcul, commandes CLI, outils d'introspection et de visualisation (`rqt`, `rviz2`, TF2, `ros2 bag`), écosystème de packages pour les systèmes autonomes.
+- **Développer une application ROS 2** : workspace, packages, nœuds, topics, paramètres, launch files, interfaces, services et actions.
+- **Réaliser un projet de synthèse** : le logiciel d'une voiture autonome pour le challenge CoVAPSy, en simulation sous Webots.
 
 ---
 
 ## Prérequis
 
 - **Système d'exploitation** :
-  - **Ubuntu 22.04** (recommandé).
-  - **Windows 10/11** (via WSL2 et Docker NVIDIA).
-  
-- **Logiciels requis** :
-  - **Git**
-  - **Docker** avec prise en charge de NVIDIA (si GPU disponible).
-  - **WSL2 et X11 Server** (pour Windows uniquement).
-  - **Visual Studio Code** avec l'extension **Remote - Containers**.
+  - **Ubuntu 24.04** (recommandé) ;
+  - **Windows 10/11** via WSL2.
+- **Logiciels** :
+  - **Git** ;
+  - **Docker** (Docker Engine sous Linux, Docker Desktop sous Windows) ;
+  - **Visual Studio Code** avec l'extension **Dev Containers** ;
+  - Sous Windows 10 uniquement : un serveur X11 (VcXsrv). Sous Windows 11, WSLg prend en charge l'affichage graphique.
+
+Aucun GPU n'est nécessaire : tous les outils du cours (turtlesim, `rqt`, `rviz2`) fonctionnent avec un rendu logiciel.
 
 ---
 
 ## Structure du dépôt
 
-- 📂 **`docs/`** : Documentation détaillée du cours avec des exercices.
-- 📂 **`docker/`** : Fichiers de configuration Docker pour ROS 2.
-- 📂 **`.devcontainer/`** : Configurations pour Visual Studio Code.
+| Dossier | Contenu |
+| --- | --- |
+| 📂 `cours/` | **Cours** : Partie I (découvrir ROS 2) et fiches de référence (Partie II). Point d'entrée : [`cours/README.md`](cours/README.md). |
+| 📂 `docker/` | `Dockerfile` de l'image ROS 2 Jazzy. |
+| 📂 `.devcontainer/` | Configuration du conteneur pour VS Code. |
 
 ---
 
-## Instructions d'installation
-
-### Sous Windows
-
-1. **Configurer X11 Server** :
-   - Installez un serveur X11 comme [VcXsrv](https://sourceforge.net/projects/vcxsrv/) ou [Xming](https://sourceforge.net/projects/xming/).
-   - Lancez X11 Server avec la configuration par défaut (aucune modification requise).
-
-2. **Cloner le dépôt** :
-   Ouvrez un terminal (PowerShell ou cmd) et exécutez la commande suivante :
-   ```bash
-   git clone https://github.com/F-KHENFRI/ros2_tutorial.git -b win_env
-   cd ros2_tutorial
-   ```
-
-3. **Ouvrir le projet dans VSCode** :
-   - Lancez Visual Studio Code.
-   - Ouvrez le dossier **ros2_tutorial**.
-   - Ouvrez la *Command Palette* (`Ctrl+Shift+P`), recherchez **"Rebuild and Reopen in Container"**, et appuyez sur **Entrée**.
-
-4. **Tester l'environnement** :
-   - Depuis le terminal intégré dans VSCode, testez une application graphique comme suit :
-     ```bash
-     gedit
-     ```
-   - L'application GUI devrait s'afficher.
-
----
+## Installation
 
 ### Sous Ubuntu
 
-1. **Cloner le projet** :
-   Ouvrez un terminal et exécutez :
+1. **Cloner le dépôt** :
    ```bash
    git clone https://github.com/F-KHENFRI/ros2_tutorial.git
    cd ros2_tutorial
    ```
+2. **Autoriser l'affichage graphique depuis le conteneur** (à refaire après chaque redémarrage) :
+   ```bash
+   xhost +local:docker
+   ```
+   > Cette commande autorise uniquement les clients X locaux lancés par Docker. Évitez `xhost +`, qui ouvre l'affichage à tout le réseau.
+3. **Ouvrir le projet dans VS Code** :
+   ```bash
+   code .
+   ```
+   Acceptez la notification **Reopen in Container**, ou passez par la *Command Palette* (`Ctrl+Shift+P`) → **Dev Containers: Rebuild and Reopen in Container**.
 
-2. **Configurer Docker NVIDIA** :
-   - Rendez le script de configuration exécutable :
-     ```bash
-     chmod +x ./config_nvidia_docker.sh
-     ```
-   - Exécutez le script :
-     ```bash
-     ./config_nvidia_docker.sh
-     ```
+### Sous Windows
 
-3. **Ouvrir le projet dans VSCode** :
-   - Lancez Visual Studio Code et ouvrez le dossier contenant ce projet. Vous pouvez aussi utiliser la commande suivante :
-     ```bash
-     code .
-     ```
-   - Si VSCode détecte automatiquement le fichier **`.devcontainer/devcontainer.json`**, une notification apparaîtra pour **Reopen in Container**. Si ce n'est pas le cas :
-     - Ouvrez la *Command Palette* (`Ctrl+Shift+P`).
-     - Recherchez **"Rebuild and Reopen in Container"** et appuyez sur **Entrée**.
+1. **Affichage graphique** :
+   - Windows 11 : rien à faire (WSLg).
+   - Windows 10 : installez [VcXsrv](https://sourceforge.net/projects/vcxsrv/) et lancez-le en cochant *Disable access control*.
+2. **Cloner le dépôt** (branche dédiée à Windows) dans un terminal PowerShell :
+   ```bash
+   git clone https://github.com/F-KHENFRI/ros2_tutorial.git -b win_env
+   cd ros2_tutorial
+   ```
+3. **Ouvrir le projet dans VS Code**, puis *Command Palette* → **Dev Containers: Rebuild and Reopen in Container**.
 
-4. **Tester l'environnement** :
-   - Depuis le terminal intégré dans VSCode, testez une application graphique comme suit :
-     ```bash
-     gedit
-     ```
-   - L'application GUI devrait s'afficher.
+### Tester l'environnement
+
+Dans le terminal intégré de VS Code (donc dans le conteneur) :
+```bash
+ros2 doctor --report | head -20   # vérifie l'installation ROS 2
+ros2 run turtlesim turtlesim_node # une fenêtre avec une tortue doit s'ouvrir
+```
 
 ---
 
 ## Résolution des problèmes
 
-### 1. Erreur "Cannot open display"
-- Assurez-vous que X11 est configuré correctement :
-  ```bash
-  xhost +local:
-  ```
-- Vérifiez que la variable `DISPLAY` est définie :
+### « cannot open display » / « could not connect to display »
+- Vérifiez la variable `DISPLAY` dans le conteneur :
   ```bash
   echo $DISPLAY
   ```
-  Par défaut, cela devrait être `:0`.
+  Sous Ubuntu elle vaut en général `:0` ou `:1`.
+- Sous Ubuntu, relancez `xhost +local:docker` sur la machine hôte.
+- Sous Windows 10, vérifiez que VcXsrv tourne avec *Disable access control*.
 
-### 2. Problèmes de permissions Docker
-- Assurez-vous que votre utilisateur est dans le groupe Docker :
-  ```bash
-  sudo usermod -aG docker $USER
-  ```
-- Déconnectez-vous et reconnectez-vous pour appliquer les changements.
+### Problèmes de permissions Docker (Ubuntu)
+```bash
+sudo usermod -aG docker $USER
+```
+Déconnectez-vous puis reconnectez-vous pour appliquer le changement.
 
-
-
+### Les nœuds de deux étudiants se voient sur le réseau
+Le conteneur utilise `--network=host` : sur un même réseau, tous les nœuds ROS 2 partageant le même `ROS_DOMAIN_ID` se découvrent mutuellement. Choisissez un identifiant propre à chaque poste (entre 0 et 101) :
+```bash
+echo "export ROS_DOMAIN_ID=<numéro_de_poste>" >> ~/.bashrc
+```
