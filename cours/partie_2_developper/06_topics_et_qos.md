@@ -198,50 +198,196 @@ Commander directement dans le callback de mesure est possible (cadence imposée 
 5. **Commande nulle** à l'arrêt du nœud et en cas de mesure périmée.
 6. **Vérifier à la CLI** (`ros2 topic echo`, `hz`, `info -v`) avant de connecter un nouveau nœud.
 
+## 7. Exercice fil rouge : régulateur de position pour Turtlesim
+
+### 7.1. Objectif
+
+Compléter le nœud `pid_regulator` du chapitre 05 afin de permettre à la tortue de rejoindre automatiquement une **position cible** $(x_d,y_d)$.
+
+La position cible est définie directement dans le code. Elle pourra ensuite être configurée à l'aide d'un paramètre ROS 2, d'un service ou d'une action.
+
+Le contrôleur doit :
+
+1. Calculer la distance entre la tortue et sa cible.
+2. Déterminer la direction à suivre.
+3. Ajuster les vitesses linéaire et angulaire.
+4. Arrêter la tortue lorsqu'elle atteint la position souhaitée.
+
+### 7.2. Modèle cinématique
+
+La tortue est modélisée comme un **robot mobile de type unicycle**, dont le mouvement est décrit par :
+
+$$
+\boxed{
+\begin{cases}
+\dot{x} = v\cos(\theta)\\
+\dot{y} = v\sin(\theta)\\
+\dot{\theta} = \omega
+\end{cases}
+}
+$$
+
+Avec :
+
+- $(x,y)$ : position actuelle.
+- $\theta$ : orientation actuelle.
+- $v$ : vitesse linéaire.
+- $\omega$ : vitesse angulaire.
+
+Les commandes sont publiées sur `/turtle1/cmd_vel` avec le message `geometry_msgs/msg/Twist` :
+
+- `linear.x` : vitesse linéaire $v$.
+- `angular.z` : vitesse angulaire $\omega$.
+
+### 7.3. Calcul des erreurs
+
+**1. Distance à la cible**
+
+$$
+\boxed{
+\rho = \sqrt{(x_d-x)^2+(y_d-y)^2}
+}
+$$
+
+**2. Orientation vers la cible**
+
+$$
+\boxed{
+\theta_c = \operatorname{atan2}(y_d-y,x_d-x)
+}
+$$
+
+**3. Erreur d'orientation vers la cible**
+
+$$
+\boxed{
+\alpha = \operatorname{wrap}(\theta_c-\theta)
+}
+$$
+
+La fonction `wrap` permet de ramener un angle dans l'intervalle $[-\pi,\pi]$ :
+
+```python
+def wrap(angle):
+    return math.atan2(math.sin(angle), math.cos(angle))
+```
+
+### 7.4. Loi de commande proportionnelle
+
+Pour atteindre la position cible, nous utilisons **deux régulateurs proportionnels** : un pour la vitesse linéaire et un pour la vitesse angulaire.
+
+#### Commande de la vitesse linéaire
+
+La vitesse linéaire est proportionnelle à la distance :
+
+$$
+\boxed{
+v = K_\rho \rho \max(0,\cos\alpha)
+}
+$$
+
+#### Commande de la vitesse angulaire
+
+La vitesse angulaire est proportionnelle à l'erreur de direction :
+
+$$
+\boxed{
+\omega = K_\alpha \alpha
+}
+$$
+
+Avec $K_\rho>0$ et $K_\alpha>K_\rho$.
+
+**Principe de fonctionnement :**
+
+- Plus la tortue est éloignée de la cible, plus sa vitesse linéaire est importante.
+- Plus l'erreur d'orientation est importante, plus la tortue tourne rapidement.
+- Si la cible est derrière la tortue, celle-ci tourne sur place avant d'avancer.
+- À l'approche de la cible, la vitesse linéaire diminue.
+
+#### Condition d'arrêt
+
+La tortue est considérée comme arrivée lorsque la distance devient inférieure à une tolérance $\varepsilon_\rho$ :
+
+$$
+\boxed{
+\rho \leq \varepsilon_\rho
+}
+$$
+
+Dans ce cas, les deux vitesses sont annulées :
+
+$$
+\boxed{
+v = 0, \qquad \omega = 0
+}
+$$
+
+### 7.5. Synthèse de la commande
+
+| État | Condition | Vitesse linéaire $v$ | Vitesse angulaire $\omega$ |
+|---|---|---|---|
+| **Déplacement** | $\rho > \varepsilon_\rho$ | $K_\rho \rho \max(0,\cos\alpha)$ | $K_\alpha\alpha$ |
+| **Arrêt** | $\rho \leq \varepsilon_\rho$ | $0$ | $0$ |
+
+Les commandes doivent être limitées afin de respecter les vitesses maximales :
+
+$$
+0 \leq v \leq v_{\max}
+$$
+
+$$
+-\omega_{\max} \leq \omega \leq \omega_{\max}
+$$
+
+### 7.6. Paramètres proposés pour le TP
+
+| Paramètre | Valeur | Description |
+|---|---|---|
+| $x_d$ | 8.0 | Position cible suivant X |
+| $y_d$ | 8.0 | Position cible suivant Y |
+| $K_\rho$ | 1.0 | Gain de vitesse linéaire |
+| $K_\alpha$ | 4.0 | Gain de correction de direction |
+| $v_{\max}$ | 2.0 | Vitesse linéaire maximale |
+| $\omega_{\max}$ | 2.0 | Vitesse angulaire maximale |
+| $\varepsilon_\rho$ | 0.1 | Tolérance de position |
+
+### 7.7. Travail demandé
+
+Compléter le nœud `pid_regulator` afin de mettre en œuvre cette loi de commande.
+
+Le nœud doit :
+
+1. Souscrire au topic `/turtle1/pose` pour récupérer la pose actuelle $(x,y,\theta)$.
+2. Calculer la distance à la cible $\rho$.
+3. Calculer l'orientation vers la cible $\theta_c$ et l'erreur angulaire $\alpha$.
+4. Déterminer les vitesses linéaire $v$ et angulaire $\omega$.
+5. Limiter les commandes aux vitesses maximales autorisées.
+6. Publier les commandes sur `/turtle1/cmd_vel`.
+7. Arrêter la tortue lorsque la position cible est atteinte.
+
+### 7.8. Test
+
+```bash
+T1$ ros2 run turtlesim turtlesim_node
+T2$ ros2 run turtle_controller pid_regulator
+T3$ ros2 run rqt_plot rqt_plot /turtle1/pose/x /turtle1/pose/y /turtle1/pose/theta
+T4$ ros2 service call /turtle1/teleport_absolute turtlesim/srv/TeleportAbsolute "{x: 1.0, y: 1.0, theta: -3.0}"
+```
+
 ---
 
-## 7. Exercice fil rouge : régulateur de position pour turtlesim
+## 8. Questions d'évaluation
 
-### 7.1 Énoncé
+1. Citez les trois conditions nécessaires pour qu'un subscriber reçoive les messages d'un publisher.
+2. Un pilote de lidar publie en BEST_EFFORT et votre nœud s'abonne avec la QoS par défaut. Que se passe-t-il ? Comment le détecter ? Comment corriger ?
+3. Pourquoi `/tf_static` et une carte d'occupation utilisent-ils la durabilité TRANSIENT_LOCAL ?
+4. Pourquoi faut-il replier l'erreur angulaire dans $]-\pi, \pi]$ ? 
+5. Quels sont les avantages de calculer la commande dans un timer plutôt que dans le callback de pose ?
 
-Compléter le nœud `pid_regulator` du chapitre 05 pour amener la tortue d'une pose initiale à une **pose cible** $(x_d, y_d, \theta_d)$, fixée en dur dans le code pour l'instant (elle deviendra un paramètre au chapitre 07, puis une requête de service ou d'action aux chapitres 10 et 11).
+---
 
-### 7.2 Modèle et choix de la loi de commande
-
-La tortue est un **unicycle** (robot non holonome) :
-
-$$
-\dot x = v\cos\theta, \qquad \dot y = v\sin\theta, \qquad \dot\theta = \omega
-$$
-
-avec $u = (v, \omega)$ la commande publiée dans `geometry_msgs/msg/Twist` (`linear.x` et `angular.z`).
-
-**Difficulté.** On ne peut pas régler $x$, $y$ et $\theta$ par trois PID indépendants. Le système n'a que deux entrées pour trois sorties, et Brockett (1983) a montré qu'**aucun retour d'état continu et stationnaire** ne stabilise asymptotiquement un unicycle en une pose. On contourne ce résultat de deux façons classiques :
-
-- **Approche en deux phases** (demandée ici) : rejoindre d'abord la **position**, puis corriger l'**orientation** finale sur place. La loi est discontinue au changement de phase, ce qui contourne l'hypothèse de Brockett.
-- **Loi en coordonnées polaires** (approfondissement) : Aicardi et al. (1995), ou la loi linéaire de Siegwart et Nourbakhsh (2011, § 3.6), définie avec $\rho$ et $\alpha$ comme ci-dessous, $\beta = -\theta - \alpha + \theta_d$ et $v = k_\rho \rho$, $\omega = k_\alpha \alpha + k_\beta \beta$. Elle est localement exponentiellement stable si $k_\rho > 0$, $k_\beta < 0$ et $k_\alpha - k_\rho > 0$. Ce changement de coordonnées est singulier en $\rho = 0$, ce qui permet d'échapper au théorème.
-
-**Erreurs utilisées** (avec $\Delta x = x_d - x$, $\Delta y = y_d - y$) :
-
-$$
-\rho = \sqrt{\Delta x^2 + \Delta y^2}, \qquad
-\alpha = \operatorname{wrap}\!\big(\operatorname{atan2}(\Delta y, \Delta x) - \theta\big), \qquad
-e_\theta = \operatorname{wrap}(\theta_d - \theta)
-$$
-
-où $\operatorname{wrap}(a) = \operatorname{atan2}(\sin a, \cos a) \in\ ]-\pi, \pi]$. **Sans ce repliement**, la tortue fait un tour complet dès que l'erreur angulaire franchit $\pm\pi$.
-
-**Loi en deux phases :**
-
-| Phase | Condition | Commande |
-| --- | --- | --- |
-| 1 – Rejoindre la position | $\rho > \varepsilon_\rho$ | $v = \operatorname{sat}\big(\mathrm{PID}_\rho(\rho)\big)\cdot\max(0, \cos\alpha)$, $\omega = \operatorname{sat}\big(\mathrm{PID}_\alpha(\alpha)\big)$ |
-| 2 – Orientation finale | $\rho \le \varepsilon_\rho$ et $\lvert e_\theta\rvert > \varepsilon_\theta$ | $v = 0$, $\omega = \operatorname{sat}\big(\mathrm{PID}_\theta(e_\theta)\big)$ |
-| Arrivé | $\rho \le \varepsilon_\rho$ et $\lvert e_\theta\rvert \le \varepsilon_\theta$ | $v = 0$, $\omega = 0$ |
-
-Le facteur $\max(0, \cos\alpha)$ fait d'abord tourner la tortue sur place quand elle est mal orientée ($\lvert\alpha\rvert \ge \pi/2$), puis la fait avancer d'autant plus vite qu'elle est alignée. Prévoyez une **hystérésis** sur $\varepsilon_\rho$ (par exemple sortir de la phase 2 seulement si $\rho > 2\varepsilon_\rho$) pour éviter les oscillations entre phases.
-
-### 7.3 Correcteur PID discret
+## ANNEXE: Correcteur PID discret
 
 À chaque pas, avec $\Delta t_k$ **mesuré** (chapitre 05) :
 
@@ -289,116 +435,3 @@ class Pid:
 ```
 
 > Le module `pid.py` étant dans le même package Python, on l'importe dans le nœud avec `from turtle_controller.pid import Pid`.
-
-### 7.4 Squelette du nœud
-
-```python
-import math
-
-import rclpy
-from geometry_msgs.msg import Twist
-from rclpy.executors import ExternalShutdownException
-from rclpy.node import Node
-from turtlesim.msg import Pose
-
-from turtle_controller.pid import Pid
-
-
-def wrap(a: float) -> float:
-    return math.atan2(math.sin(a), math.cos(a))
-
-
-class PidRegulator(Node):
-    def __init__(self) -> None:
-        super().__init__('pid_regulator')
-        # Cible (paramètre au chapitre 07)
-        self.x_d, self.y_d, self.theta_d = 8.0, 8.0, math.pi / 2
-        self.eps_rho, self.eps_theta = 0.05, 0.02
-
-        self.pid_rho = Pid(kp=1.0, ki=0.0, kd=0.0, u_max=2.0)
-        self.pid_alpha = Pid(kp=4.0, ki=0.0, kd=0.0, u_max=2.0)
-        self.pid_theta = Pid(kp=3.0, ki=0.0, kd=0.0, u_max=1.5)
-
-        self.pose: Pose | None = None
-        self.pose_stamp = None
-        self.phase = 1
-
-        # TODO 1 : subscriber sur 'turtle1/pose' (nom relatif) → self.on_pose
-        # TODO 2 : publisher Twist sur 'turtle1/cmd_vel'
-        self.t_prev = self.get_clock().now()
-        self.timer = self.create_timer(0.02, self.control_loop)      # 50 Hz
-        self.get_logger().info('Node pid_regulator has been created successfully!')
-
-    def on_pose(self, msg: Pose) -> None:
-        # TODO 3 : mémoriser msg et son horodatage de réception
-        pass
-
-    def control_loop(self) -> None:
-        now = self.get_clock().now()
-        dt = (now - self.t_prev).nanoseconds * 1e-9
-        self.t_prev = now
-        cmd = Twist()
-        # TODO 4 : si pas de pose, ou pose plus vieille que 0,2 s → publier cmd nulle et sortir
-        # TODO 5 : calculer rho, alpha, e_theta ; gérer les phases (avec hystérésis) ;
-        #          remettre les PID à zéro à chaque changement de phase
-        # TODO 6 : remplir cmd.linear.x et cmd.angular.z, publier
-        # TODO 7 : journaliser (throttle 1 s) la phase, rho et e_theta
-
-    def stop(self) -> None:
-        # Commande nulle avant de quitter (appelée dans main avant destroy_node)
-        pass
-
-
-def main(args=None) -> None:
-    rclpy.init(args=args)
-    node = PidRegulator()
-    try:
-        rclpy.spin(node)
-    except (KeyboardInterrupt, ExternalShutdownException):
-        pass
-    finally:
-        node.stop()
-        node.destroy_node()
-        rclpy.try_shutdown()
-```
-
-### 7.5 Test
-
-```bash
-T1$ ros2 run turtlesim turtlesim_node
-T2$ ros2 run turtle_controller pid_regulator
-T3$ ros2 run rqt_plot rqt_plot /turtle1/pose/x /turtle1/pose/y /turtle1/pose/theta
-T4$ ros2 service call /turtle1/teleport_absolute turtlesim/srv/TeleportAbsolute "{x: 1.0, y: 1.0, theta: -3.0}"
-```
-
-### 7.6 Critères de validation
-
-- Erreur finale $\rho < 0{,}05$ et $\lvert e_\theta\rvert < 0{,}02$ rad, depuis au moins trois poses initiales différentes, dont une avec $\theta$ proche de $\pm\pi$.
-- Vitesses toujours dans les bornes ($\lvert v\rvert \le 2$, $\lvert\omega\rvert \le 2$) : vérifiez avec `ros2 topic echo /turtle1/cmd_vel`.
-- La tortue s'arrête si `turtlesim_node` est tué puis relancé (pose périmée → commande nulle).
-- Ctrl+C sur `pid_regulator` arrête la tortue.
-
-### 7.7 Pour aller plus loin
-
-1. Comparez $K_i = 0$ et $K_i > 0$ sur $\rho$ : l'intégrale est-elle utile pour ce système ? Justifiez par la présence ou non d'une perturbation constante dans le modèle.
-2. Implémentez la loi polaire de Siegwart et comparez les trajectoires (temps d'arrivée, longueur du chemin).
-3. Publiez les erreurs $(\rho, \alpha, e_\theta)$ sur un topic de débogage, par exemple `~/errors` de type `geometry_msgs/msg/Vector3`, et tracez-les avec `rqt_plot`.
-
----
-
-## 8. Questions d'évaluation
-
-1. Citez les trois conditions nécessaires pour qu'un subscriber reçoive les messages d'un publisher.
-2. Un pilote de lidar publie en BEST_EFFORT et votre nœud s'abonne avec la QoS par défaut. Que se passe-t-il ? Comment le détecter ? Comment corriger ?
-3. Pourquoi `/tf_static` et une carte d'occupation utilisent-ils la durabilité TRANSIENT_LOCAL ?
-4. Pourquoi faut-il replier l'erreur angulaire dans $]-\pi, \pi]$ ? Donnez un exemple numérique où l'oubli provoque un demi-tour inutile.
-5. Expliquez pourquoi trois PID indépendants sur $x$, $y$ et $\theta$ ne permettent pas d'atteindre une pose quelconque avec un unicycle.
-6. Quels sont les avantages de calculer la commande dans un timer plutôt que dans le callback de pose ?
-
-## Références
-
-- R. W. Brockett, « Asymptotic stability and feedback stabilization », in *Differential Geometric Control Theory*, Birkhäuser, 1983.
-- M. Aicardi, G. Casalino, A. Bicchi, A. Balestrino, « Closed loop steering of unicycle-like vehicles via Lyapunov techniques », *IEEE Robotics & Automation Magazine*, 2(1), 1995.
-- R. Siegwart, I. R. Nourbakhsh, D. Scaramuzza, *Introduction to Autonomous Mobile Robots*, 2e éd., MIT Press, 2011, § 3.6.
-- K. J. Åström, R. M. Murray, *Feedback Systems*, 2e éd., Princeton University Press, 2021, chap. 11 (PID, anti-windup).
-- Documentation QoS (Jazzy) : <https://docs.ros.org/en/jazzy/Concepts/Intermediate/About-Quality-of-Service-Settings.html>

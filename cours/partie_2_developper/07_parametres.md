@@ -114,11 +114,9 @@ Fichier `turtle_controller/config/pid_params.yaml` :
     pid:
       linear:  {kp: 1.0, ki: 0.0, kd: 0.0, u_max: 2.0}
       angular: {kp: 4.0, ki: 0.0, kd: 0.0, u_max: 2.0}
-      heading: {kp: 3.0, ki: 0.0, kd: 0.0, u_max: 1.5}
-    target: [8.0, 8.0, 1.5708]
+    target: [8.0, 8.0]
     tolerance:
       position: 0.05
-      heading: 0.02
 ```
 
 - La clé de premier niveau est le **nom complet du nœud** (`/robot1/pid_regulator`) ou le joker `/**`.
@@ -176,15 +174,15 @@ class PidRegulator(Node):
         for p in params:
             if p.name == 'target':
                 v = p.value
-                if len(v) != 3 or not (0.0 <= v[0] <= 11.0 and 0.0 <= v[1] <= 11.0):
+                if len(v) != 2 or not (0.0 <= v[0] <= 11.0 and 0.0 <= v[1] <= 11.0):
                     return SetParametersResult(successful=False,
-                                               reason='target = [x, y, theta], x et y dans [0, 11]')
+                                               reason='target = [x, y], x et y dans [0, 11]')
         return SetParametersResult(successful=True)
 
     def apply_params(self, params: list[Parameter]) -> None:
         for p in params:
             if p.name.startswith('pid.'):
-                self.reload_gains()          # recopie les gains dans les objets Pid et les remet à zéro
+                self.reload_gains(p)          # recopie les gains dans les objets Pid et les remet à zéro
             elif p.name == 'target':
                 self.set_target(*p.value)
 ```
@@ -200,7 +198,7 @@ ros2 param list /pid_regulator
 ros2 param describe /pid_regulator pid.linear.kp
 ros2 param get /pid_regulator pid.linear.kp
 ros2 param set /pid_regulator pid.linear.kp 2.0
-ros2 param set /pid_regulator target "[5.0, 5.0, 0.0]"
+ros2 param set /pid_regulator target "[5.0, 5.0]"
 ros2 param dump /pid_regulator > reglage_final.yaml
 ros2 param load /pid_regulator reglage_final.yaml
 ros2 run rqt_reconfigure rqt_reconfigure        # curseurs pour les paramètres bornés
@@ -224,24 +222,23 @@ ros2 run rqt_reconfigure rqt_reconfigure        # curseurs pour les paramètres 
 **Objectif** : rendre `pid_regulator` entièrement configurable sans recompilation.
 
 1. Déclarez avec descripteurs :
-   - `pid.linear.{kp,ki,kd,u_max}`, `pid.angular.{…}`, `pid.heading.{…}` : réels, bornés à $[0, 20]$ ;
-   - `target` : `double[]` de longueur 3, valeur par défaut `[8.0, 8.0, 1.5708]` ;
-   - `tolerance.position`, `tolerance.heading` : réels positifs ;
+   - `pid.linear.{kp,ki,kd,u_max}`, `pid.angular.{…}`: réels, bornés à $[0, 20]$ ;
+   - `target` : `double[]` de longueur 2, valeur par défaut `[8.0, 8.0]` ;
+   - `tolerance.position` : réels positifs ;
    - `rate_hz` : en lecture seule.
 2. Créez `config/pid_params.yaml` et installez-le via `setup.py`.
-3. Implémentez `validate_params` (longueur et domaine de `target`) et `apply_params` (mise à jour des `Pid` avec remise à zéro, changement de cible avec retour en phase 1).
+3. Implémentez `validate_params` (longueur et domaine de `target`).
 4. Testez :
    ```bash
    ros2 run turtle_controller pid_regulator --ros-args \
      --params-file install/turtle_controller/share/turtle_controller/config/pid_params.yaml
-   ros2 param set /pid_regulator target "[2.0, 9.0, 3.14]"      # la tortue repart
-   ros2 param set /pid_regulator target "[20.0, 9.0, 0.0]"      # doit être refusé
+   ros2 param set /pid_regulator target "[2.0, 9.0]"       # la tortue repart
+   ros2 param set /pid_regulator target "[20.0, 9.0]"      # doit être refusé
    ros2 param set /pid_regulator pid.linear.kp 25.0             # doit être refusé (borne)
    ros2 param set /pid_regulator rate_hz 10.0                   # doit être refusé (lecture seule)
    ```
 5. Réglez les gains en direct avec `rqt_reconfigure` tout en observant `rqt_plot`. Sauvegardez le réglage obtenu avec `ros2 param dump`.
 
-**Critères de validation** : les quatre commandes du point 4 donnent le résultat annoncé ; un changement de gain en cours de mouvement ne provoque pas de saut de commande dû à l'intégrale.
 
 **Question d'analyse** : modifier `target` par `ros2 param set` fonctionne, mais le client ne sait pas quand la tortue est arrivée. Quel mécanisme de communication serait plus adapté ? (Réponse aux chapitres 10 et 11.)
 
@@ -249,7 +246,7 @@ ros2 run rqt_reconfigure rqt_reconfigure        # curseurs pour les paramètres 
 
 ## 9. Questions d'évaluation
 
-1. Pourquoi faut-il déclarer un paramètre avant de l'utiliser ? Quel risque l'option `allow_undeclared_parameters` fait-elle courir ?
+1. Pourquoi faut-il déclarer un paramètre avant de l'utiliser ? 
 2. Comment représenter un ensemble de gains structuré sachant qu'il n'existe pas de paramètre de type dictionnaire ?
 3. Classez par priorité croissante : valeur par défaut, `-p`, fichier YAML, `ros2 param set`.
 4. Pourquoi séparer validation (`on_set`) et application (`post_set`) ?

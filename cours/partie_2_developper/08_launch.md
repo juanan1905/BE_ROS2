@@ -111,7 +111,7 @@ ros2 launch turtle_controller turtle_pid.launch.py
 ros2 launch turtle_controller turtle_pid.launch.py --show-args     # liste les arguments exposés
 ```
 
-> Avec `--symlink-install`, modifier un launch file **existant** ne demande pas de recompiler. En **ajouter** un nouveau, si.
+> Avec `--symlink-install`, la modification d'un fichier launch existant ne nécessite pas de recompiler le package. En revanche, l'ajout d'un nouveau fichier launch peut nécessiter de relancer la commande colcon build.
 
 ---
 
