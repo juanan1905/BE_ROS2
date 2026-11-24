@@ -2,12 +2,12 @@
 
 ## Objectifs pédagogiques
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Comprendre | Expliquer le rôle d'un launch file et le principe des substitutions évaluées au lancement. |
-| Appliquer | Écrire un launch file Python qui démarre plusieurs nœuds avec paramètres, remappings et namespace. |
-| Appliquer | Exposer des arguments de lancement et inclure un autre launch file. |
-| Créer | Déployer plusieurs robots identiques par simple changement de namespace. |
+À la fin de ce chapitre, vous saurez :
+
+- expliquer à quoi sert un launch file et comment certaines valeurs ne sont calculées qu'au moment du lancement ;
+- écrire un launch file Python qui démarre plusieurs nœuds avec leurs paramètres, leurs remappings et leur namespace ;
+- ajouter des arguments de lancement et réutiliser un autre launch file ;
+- lancer plusieurs robots identiques en changeant seulement leur namespace.
 
 **Prérequis** : [07 – Paramètres](07_parametres.md).
 

@@ -2,14 +2,12 @@
 
 ## Objectifs pédagogiques
 
-À l'issue de ce chapitre, l'étudiant sera capable de :
+À la fin de ce chapitre, vous saurez :
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Se souvenir | Nommer les cinq mécanismes du graphe de calcul (nœud, topic, service, action, paramètre). |
-| Comprendre | Expliquer le rôle des couches rcl, rmw et DDS, et le mécanisme de découverte. |
-| Appliquer | Inspecter et piloter un système ROS 2 en cours d'exécution avec la CLI `ros2`. |
-| Analyser | Choisir le mécanisme de communication adapté à un besoin donné (flux, requête ponctuelle, tâche longue). |
+- nommer les cinq briques de base de ROS 2 : nœud, topic, service, action et paramètre ;
+- expliquer comment ROS 2 est organisé en couches (rcl, rmw, DDS) et comment les nœuds se trouvent entre eux sur le réseau ;
+- observer et piloter un système ROS 2 en marche avec la commande `ros2` ;
+- choisir le bon moyen de communication selon le besoin : flux continu de données, demande ponctuelle ou tâche longue.
 
 **Prérequis** : conteneur fonctionnel (voir le [README du dépôt](../../README.md)).
 

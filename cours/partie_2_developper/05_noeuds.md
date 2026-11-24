@@ -2,12 +2,12 @@
 
 ## Objectifs pédagogiques
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Comprendre | Décrire le cycle de vie d'un programme `rclpy` (init → création → spin → arrêt). |
-| Comprendre | Expliquer le rôle de l'executor et des callback groups. |
-| Appliquer | Écrire un nœud orienté objet avec timer, logging et arrêt propre, puis l'enregistrer comme exécutable. |
-| Analyser | Identifier pourquoi un callback bloquant fige un nœud. |
+À la fin de ce chapitre, vous saurez :
+
+- décrire les étapes de la vie d'un programme `rclpy` : initialisation, création du nœud, exécution (`spin`), arrêt ;
+- expliquer le rôle de l'executor et des callback groups ;
+- écrire un nœud sous forme de classe, avec un timer, des messages de log et un arrêt propre, puis le déclarer comme exécutable ;
+- comprendre pourquoi un callback qui bloque fige tout le nœud.
 
 **Prérequis** : [04 – Workspace et package](04_workspace_et_package.md).
 

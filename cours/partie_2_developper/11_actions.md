@@ -2,13 +2,13 @@
 
 ## Objectifs pédagogiques
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Comprendre | Décrire le cycle de vie d'un but (goal) et les états d'une action. |
-| Appliquer | Écrire un serveur d'action avec validation, retour d'état, annulation et préemption. |
-| Appliquer | Écrire un client d'action qui enchaîne des buts et suit leur progression. |
-| Analyser | Structurer un nœud concurrent (executor multithread, callback groups, verrou). |
-| Créer | Transformer `pid_regulator` en serveur `GoToPose` et `turtle_navigation` en planificateur de mission. |
+À la fin de ce chapitre, vous saurez :
+
+- décrire les étapes de la vie d'un but (goal) et les états possibles d'une action ;
+- écrire un serveur d'action qui valide un but, envoie un retour d'état, gère l'annulation et le remplacement par un nouveau but ;
+- écrire un client d'action qui enchaîne plusieurs buts et suit leur avancement ;
+- organiser un nœud qui traite plusieurs callbacks en parallèle (executor multithread, callback groups, verrou) ;
+- transformer `pid_regulator` en serveur d'action `GoToPose` et `turtle_navigation` en client qui exécute une mission.
 
 **Prérequis** : [10 – Services](10_services.md) et [05 – Nœuds](05_noeuds.md) (section 5, executors).
 
@@ -139,7 +139,7 @@ class PidRegulator(Node):
                 self.goal_handle.abort()
             self.goal_handle = goal_handle
             g = goal_handle.request
-            self.set_target(g.x, g.y, g.theta)          # remet les PID à zéro, phase 1
+            self.set_target(g.x, g.y)                   # nouvelle cible, PHASE_MOVING
         goal_handle.execute()
 
     def on_cancel(self, goal_handle) -> CancelResponse:
@@ -162,16 +162,16 @@ class PidRegulator(Node):
                 result.success = False
                 break
             with self.lock:
-                phase, rho, e_theta = self.phase, self.rho, self.e_theta
+                phase, rho = self.phase, self.rho
             if phase == ControllerState.PHASE_DONE:
                 goal_handle.succeed()
                 result.success = True
                 break
-            feedback.phase, feedback.distance_remaining, feedback.heading_error = phase, rho, e_theta
+            feedback.phase, feedback.distance_remaining = phase, rho
             goal_handle.publish_feedback(feedback)
             time.sleep(0.1)                             # 10 Hz de retour d'état
 
-        result.final_distance, result.final_heading_error = self.rho, self.e_theta
+        result.final_distance = self.rho
         result.elapsed = (self.get_clock().now() - start).to_msg()
         return result
 
@@ -194,8 +194,8 @@ def main(args=None) -> None:
 Points clés :
 - `execute()` **boucle** : il occupe un thread pendant toute la durée du but. Sans `MultiThreadedExecutor`, le timer de commande et l'abonnement à la pose seraient bloqués, et la tortue ne bougerait jamais.
 - `time.sleep` ne suit pas `use_sim_time`. Pour du temps simulé, préférez une attente sur l'horloge du nœud, par exemple avec un `threading.Event` déclenché par le timer.
-- `on_accepted` et `execute` lisent et écrivent l'état utilisé par `control_loop` : le **verrou** évite les lectures incohérentes (cible à moitié mise à jour). `control_loop` doit prendre le même verrou, et y mémoriser à chaque cycle `self.phase`, `self.rho` et `self.e_theta`.
-- Sans but actif, `control_loop` reste en phase `PHASE_IDLE` et publie une commande nulle ; `set_target()` le fait passer en `PHASE_POSITION`, et l'arrivée en `PHASE_DONE`.
+- `on_accepted` et `execute` lisent et écrivent l'état utilisé par `control_loop` : le **verrou** évite les lectures incohérentes (cible à moitié mise à jour). `control_loop` doit prendre le même verrou, et y mémoriser à chaque cycle `self.phase` et `self.rho`.
+- Sans but actif, `control_loop` reste en phase `PHASE_IDLE` et publie une commande nulle ; `set_target()` le fait passer en `PHASE_MOVING`, et l'arrivée ($\rho \le \varepsilon_\rho$) en `PHASE_DONE`.
 - Un but préempté par `abort()` dans `on_accepted` voit `is_active` passer à `False` : sa boucle `execute` s'arrête d'elle-même.
 
 ---
@@ -212,9 +212,9 @@ from turtle_interfaces.action import GoToPose
 class TurtleNavigation(Node):
     def __init__(self) -> None:
         super().__init__('turtle_navigation')
-        self.declare_parameter('waypoints', [2.0, 2.0, 0.0, 9.0, 2.0, 1.57, 9.0, 9.0, 3.14])
+        self.declare_parameter('waypoints', [2.0, 2.0, 9.0, 2.0, 9.0, 9.0])
         flat = self.get_parameter('waypoints').value
-        self.waypoints = [tuple(flat[i:i + 3]) for i in range(0, len(flat), 3)]
+        self.waypoints = [tuple(flat[i:i + 2]) for i in range(0, len(flat), 2)]   # [(x, y), ...]
         self.index = 0
         self.client = ActionClient(self, GoToPose, 'pid_regulator/go_to_pose')
         self.client.wait_for_server()
@@ -224,9 +224,9 @@ class TurtleNavigation(Node):
         if self.index >= len(self.waypoints):
             self.get_logger().info('Mission terminée')
             return
-        x, y, th = self.waypoints[self.index]
-        goal = GoToPose.Goal(x=x, y=y, theta=th)
-        self.get_logger().info(f'But {self.index + 1}/{len(self.waypoints)} : ({x}, {y}, {th})')
+        x, y = self.waypoints[self.index]
+        goal = GoToPose.Goal(x=x, y=y)
+        self.get_logger().info(f'But {self.index + 1}/{len(self.waypoints)} : ({x}, {y})')
         future = self.client.send_goal_async(goal, feedback_callback=self.on_feedback)
         future.add_done_callback(self.on_goal_response)
 
@@ -265,7 +265,7 @@ CLI équivalente :
 
 ```bash
 ros2 action send_goal /pid_regulator/go_to_pose turtle_interfaces/action/GoToPose \
-  "{x: 8.0, y: 8.0, theta: 1.57}" --feedback
+  "{x: 8.0, y: 8.0}" --feedback
 ```
 
 ---

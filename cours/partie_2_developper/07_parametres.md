@@ -2,12 +2,12 @@
 
 ## Objectifs pédagogiques
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Comprendre | Décrire le cycle de vie d'un paramètre : déclaration, surcharge au lancement, modification à l'exécution. |
-| Appliquer | Déclarer des paramètres typés avec descripteurs (description, bornes, lecture seule). |
-| Appliquer | Charger un fichier YAML et réagir aux modifications avec des callbacks. |
-| Analyser | Distinguer ce qui relève d'un paramètre, d'un topic ou d'un service. |
+À la fin de ce chapitre, vous saurez :
+
+- décrire la vie d'un paramètre : déclaration, valeur donnée au lancement, modification pendant l'exécution ;
+- déclarer des paramètres typés avec une description, des bornes ou en lecture seule ;
+- charger des paramètres depuis un fichier YAML et réagir quand un paramètre change ;
+- choisir entre un paramètre, un topic ou un service selon le besoin.
 
 **Prérequis** : [06 – Topics et QoS](06_topics_et_qos.md).
 
@@ -116,7 +116,7 @@ Fichier `turtle_controller/config/pid_params.yaml` :
       angular: {kp: 4.0, ki: 0.0, kd: 0.0, u_max: 2.0}
     target: [8.0, 8.0]
     tolerance:
-      position: 0.05
+      position: 0.1
 ```
 
 - La clé de premier niveau est le **nom complet du nœud** (`/robot1/pid_regulator`) ou le joker `/**`.
@@ -222,9 +222,9 @@ ros2 run rqt_reconfigure rqt_reconfigure        # curseurs pour les paramètres 
 **Objectif** : rendre `pid_regulator` entièrement configurable sans recompilation.
 
 1. Déclarez avec descripteurs :
-   - `pid.linear.{kp,ki,kd,u_max}`, `pid.angular.{…}`: réels, bornés à $[0, 20]$ ;
+   - `pid.linear.{kp,ki,kd,u_max}`, `pid.angular.{…}` : réels, bornés à $[0, 20]$ ;
    - `target` : `double[]` de longueur 2, valeur par défaut `[8.0, 8.0]` ;
-   - `tolerance.position` : réels positifs ;
+   - `tolerance.position` : réel positif, valeur par défaut `0.1` ;
    - `rate_hz` : en lecture seule.
 2. Créez `config/pid_params.yaml` et installez-le via `setup.py`.
 3. Implémentez `validate_params` (longueur et domaine de `target`).
@@ -232,10 +232,10 @@ ros2 run rqt_reconfigure rqt_reconfigure        # curseurs pour les paramètres 
    ```bash
    ros2 run turtle_controller pid_regulator --ros-args \
      --params-file install/turtle_controller/share/turtle_controller/config/pid_params.yaml
-   ros2 param set /pid_regulator target "[2.0, 9.0]"       # la tortue repart
-   ros2 param set /pid_regulator target "[20.0, 9.0]"      # doit être refusé
-   ros2 param set /pid_regulator pid.linear.kp 25.0             # doit être refusé (borne)
-   ros2 param set /pid_regulator rate_hz 10.0                   # doit être refusé (lecture seule)
+   ros2 param set /pid_regulator target "[2.0, 9.0]"     # la tortue repart
+   ros2 param set /pid_regulator target "[20.0, 9.0]"    # doit être refusé
+   ros2 param set /pid_regulator pid.linear.kp 25.0      # doit être refusé (borne)
+   ros2 param set /pid_regulator rate_hz 10.0            # doit être refusé (lecture seule)
    ```
 5. Réglez les gains en direct avec `rqt_reconfigure` tout en observant `rqt_plot`. Sauvegardez le réglage obtenu avec `ros2 param dump`.
 

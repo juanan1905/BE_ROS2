@@ -2,11 +2,11 @@
 
 ## Objectifs pédagogiques
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Comprendre | Expliquer la notion d'*underlay* et d'*overlay*, et l'ordre de sourçage. |
-| Appliquer | Créer un workspace, un package `ament_python` et le compiler avec `colcon`. |
-| Analyser | Identifier le rôle de chaque fichier d'un package (`package.xml`, `setup.py`, `setup.cfg`, `resource/`). |
+À la fin de ce chapitre, vous saurez :
+
+- expliquer comment un workspace s'appuie sur l'installation de ROS 2 (*underlay* et *overlay*) et dans quel ordre « sourcer » les environnements ;
+- créer un workspace et un package Python (`ament_python`), puis le compiler avec `colcon` ;
+- dire à quoi sert chaque fichier d'un package : `package.xml`, `setup.py`, `setup.cfg` et le dossier `resource/`.
 
 **Prérequis** : Partie I.
 

@@ -2,12 +2,12 @@
 
 ## Objectifs pédagogiques
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Comprendre | Expliquer la structure d'un arbre de repères TF2 et les conventions REP 103 et REP 105. |
-| Appliquer | Visualiser un graphe (`rqt_graph`), tracer un signal (`rqt_plot`), enregistrer et rejouer des données (`ros2 bag`). |
-| Appliquer | Publier une transformation statique et interroger une transformation entre deux repères. |
-| Analyser | Diagnostiquer un système défaillant (topic non connecté, transformation manquante) à l'aide des outils. |
+À la fin de ce chapitre, vous saurez :
+
+- expliquer comment TF2 organise les repères d'un robot en arbre, et les conventions de nommage des repères (REP 103 et REP 105) ;
+- afficher le graphe des nœuds (`rqt_graph`), tracer un signal (`rqt_plot`), enregistrer et rejouer des données (`ros2 bag`) ;
+- publier une transformation fixe entre deux repères et lire la transformation entre deux repères quelconques ;
+- trouver la cause d'une panne (topic non connecté, transformation manquante) à l'aide de ces outils.
 
 **Prérequis** : [01 – Concepts et CLI](01_concepts_et_cli.md).
 

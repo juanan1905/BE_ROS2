@@ -2,11 +2,11 @@
 
 ## Objectifs pédagogiques
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Se souvenir | Associer chaque brique de la chaîne d'autonomie aux packages ROS 2 de référence. |
-| Comprendre | Situer les interfaces standard (`sensor_msgs`, `nav_msgs`, TF) qui permettent de composer ces packages. |
-| Évaluer | Choisir une pile logicielle adaptée à une plateforme (robot mobile, drone, manipulateur, véhicule) en tenant compte de la maturité et des contraintes embarquées. |
+À la fin de ce chapitre, vous saurez :
+
+- relier chaque étape de la chaîne d'autonomie (perception, localisation, planification, commande) aux packages ROS 2 les plus utilisés ;
+- expliquer comment les messages standard (`sensor_msgs`, `nav_msgs`, TF) permettent d'assembler ces packages entre eux ;
+- choisir un ensemble de packages adapté à un robot donné (robot mobile, drone, bras manipulateur, véhicule), en tenant compte de leur maturité et de la puissance de calcul disponible à bord.
 
 **Prérequis** : chapitres [01](01_concepts_et_cli.md) et [02](02_outils_rqt_bag_tf2_rviz2.md).
 

@@ -2,11 +2,11 @@
 
 ## Objectifs pédagogiques
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Appliquer | Écrire un serveur de service et un client asynchrone en `rclpy`. |
-| Comprendre | Expliquer pourquoi un appel synchrone dans un callback provoque un interblocage. |
-| Analyser | Identifier les limites d'un service pour une tâche longue et justifier le passage à une action. |
+À la fin de ce chapitre, vous saurez :
+
+- écrire un serveur de service et un client asynchrone en `rclpy` ;
+- expliquer pourquoi un appel synchrone dans un callback bloque le nœud pour toujours (interblocage) ;
+- voir pourquoi un service ne convient pas à une tâche longue, et pourquoi une action est alors préférable.
 
 **Prérequis** : [09 – Interfaces personnalisées](09_interfaces.md) (`turtle_interfaces/srv/SetTarget`).
 
@@ -60,7 +60,7 @@ class PidRegulator(Node):
             response.success = False
             response.message = f'Cible hors du domaine : ({request.x:.2f}, {request.y:.2f})'
             return response
-        self.set_target(request.x, request.y, request.theta)   # change la cible, revient en phase 1
+        self.set_target(request.x, request.y)   # change la cible, passe en PHASE_MOVING
         response.success = True
         response.message = 'Cible acceptée'
         return response
@@ -84,10 +84,10 @@ class TargetClient(Node):
         self.cli = self.create_client(SetTarget, 'pid_regulator/set_target')
         while not self.cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Service indisponible, nouvelle tentative…')
-        self.send(5.0, 5.0, 0.0)
+        self.send(5.0, 5.0)
 
-    def send(self, x: float, y: float, theta: float) -> None:
-        req = SetTarget.Request(x=x, y=y, theta=theta)
+    def send(self, x: float, y: float) -> None:
+        req = SetTarget.Request(x=x, y=y)
         future = self.cli.call_async(req)
         future.add_done_callback(self.on_response)     # appelé par l'executor à la réception
 
@@ -146,7 +146,7 @@ Exemple de la solution 2 :
 
 ```python
 async def on_timer(self) -> None:
-    res = await self.cli.call_async(SetTarget.Request(x=5.0, y=5.0, theta=0.0))
+    res = await self.cli.call_async(SetTarget.Request(x=5.0, y=5.0))
     self.get_logger().info(res.message)
 ```
 
@@ -174,7 +174,7 @@ executor.spin()
 ros2 service list -t
 ros2 service type /pid_regulator/set_target
 ros2 interface show turtle_interfaces/srv/SetTarget
-ros2 service call /pid_regulator/set_target turtle_interfaces/srv/SetTarget "{x: 8.0, y: 8.0, theta: 1.57}"
+ros2 service call /pid_regulator/set_target turtle_interfaces/srv/SetTarget "{x: 8.0, y: 8.0}"
 ros2 service echo /pid_regulator/set_target      # observe requêtes et réponses (Iron et ultérieures ; introspection à activer côté nœud)
 ```
 
@@ -195,16 +195,16 @@ ros2 service echo /pid_regulator/set_target      # observe requêtes et réponse
 
 ### 7.1 Serveur dans `pid_regulator`
 
-1. Ajoutez le serveur `~/set_target` (type `turtle_interfaces/srv/SetTarget`). Il valide la requête, met à jour la cible, remet les PID à zéro et repasse en phase 1.
+1. Ajoutez le serveur `~/set_target` (type `turtle_interfaces/srv/SetTarget`). Il valide la requête, met à jour la cible et relance le déplacement (`PHASE_MOVING`).
 2. Testez avec la CLI :
    ```bash
-   ros2 service call /pid_regulator/set_target turtle_interfaces/srv/SetTarget "{x: 2.0, y: 2.0, theta: 0.0}"
-   ros2 service call /pid_regulator/set_target turtle_interfaces/srv/SetTarget "{x: 20.0, y: 2.0, theta: 0.0}"   # refus attendu
+   ros2 service call /pid_regulator/set_target turtle_interfaces/srv/SetTarget "{x: 2.0, y: 2.0}"
+   ros2 service call /pid_regulator/set_target turtle_interfaces/srv/SetTarget "{x: 20.0, y: 2.0}"   # refus attendu
    ```
 
 ### 7.2 Client `turtle_navigation`
 
-3. Créez le nœud `turtle_navigation` dans `turtle_controller`. Il lit un paramètre `waypoints` (`double[]` à plat : $[x_1, y_1, \theta_1, x_2, y_2, \theta_2, \dots]$) et envoie la **première** cible par service.
+3. Créez le nœud `turtle_navigation` dans `turtle_controller`. Il lit un paramètre `waypoints` (`double[]` à plat : $[x_1, y_1, x_2, y_2, \dots]$) et envoie la **première** cible par service.
 4. Étendez-le pour parcourir **toute la liste**, chaque cible n'étant envoyée qu'une fois la précédente **atteinte**.
 
 ### 7.3 Analyse

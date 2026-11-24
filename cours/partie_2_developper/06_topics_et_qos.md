@@ -2,13 +2,13 @@
 
 ## Objectifs pédagogiques
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Comprendre | Expliquer les politiques de QoS (fiabilité, durabilité, historique) et leurs règles de compatibilité. |
-| Appliquer | Écrire un publisher et un subscriber en `rclpy`, avec un profil de QoS explicite. |
-| Appliquer | Fermer une boucle de commande : subscriber de mesure, timer de commande, publisher d'actionneur. |
-| Analyser | Diagnostiquer une communication qui ne passe pas (nom, type, QoS) avec la CLI. |
-| Évaluer | Justifier la structure d'un régulateur pour un robot non holonome. |
+À la fin de ce chapitre, vous saurez :
+
+- expliquer les réglages de QoS (fiabilité, durabilité, historique) et savoir quand un publisher et un subscriber sont compatibles ;
+- écrire un publisher et un subscriber en `rclpy`, avec une QoS choisie explicitement ;
+- écrire une boucle de commande complète : lire une mesure, calculer la commande dans un timer, l'envoyer au robot ;
+- trouver avec la commande `ros2` pourquoi deux nœuds ne communiquent pas (nom, type ou QoS) ;
+- écrire un régulateur qui amène la tortue de turtlesim à une position cible.
 
 **Prérequis** : [05 – Nœuds](05_noeuds.md) (squelette de `pid_regulator`).
 

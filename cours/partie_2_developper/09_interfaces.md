@@ -2,11 +2,11 @@
 
 ## Objectifs pédagogiques
 
-| Niveau (Bloom) | Objectif |
-| --- | --- |
-| Se souvenir | Citer la syntaxe des fichiers `.msg`, `.srv` et `.action`, et leurs conventions de nommage. |
-| Appliquer | Créer un package d'interfaces `ament_cmake`, le compiler et utiliser ses types depuis un package Python. |
-| Évaluer | Décider s'il faut créer une interface ou réutiliser une interface standard. |
+À la fin de ce chapitre, vous saurez :
+
+- écrire des fichiers `.msg`, `.srv` et `.action` en respectant leur syntaxe et leurs règles de nommage ;
+- créer un package d'interfaces (`ament_cmake`), le compiler et utiliser ses types depuis un package Python ;
+- décider s'il faut créer une nouvelle interface ou réutiliser une interface standard.
 
 **Prérequis** : [08 – Launch files](08_launch.md).
 
@@ -109,26 +109,23 @@ mkdir msg srv action
 
 ```text
 # État interne du régulateur, publié à chaque cycle (débogage, rqt_plot)
-uint8 PHASE_IDLE=0
-uint8 PHASE_POSITION=1
-uint8 PHASE_HEADING=2
-uint8 PHASE_DONE=3
+uint8 PHASE_IDLE=0               # pas de cible active, commande nulle
+uint8 PHASE_MOVING=1             # rho > tolérance : déplacement vers la cible
+uint8 PHASE_DONE=2               # rho <= tolérance : cible atteinte, commande nulle
 
 std_msgs/Header header
 uint8 phase
 float64 rho                      # distance à la cible (m)
 float64 alpha                    # erreur de cap vers la cible (rad, dans ]-pi, pi])
-float64 heading_error            # erreur d'orientation finale (rad)
 geometry_msgs/Twist command      # commande publiée
 ```
 
 ### 3.2 `srv/SetTarget.srv`
 
 ```text
-# Requête : nouvelle pose cible, dans le repère du simulateur
+# Requête : nouvelle position cible, dans le repère du simulateur
 float64 x                        # m, dans [0, 11]
 float64 y                        # m, dans [0, 11]
-float64 theta                    # rad
 ---
 bool success
 string message
@@ -137,21 +134,18 @@ string message
 ### 3.3 `action/GoToPose.action`
 
 ```text
-# Goal : pose à atteindre
-float64 x
-float64 y
-float64 theta
+# Goal : position à atteindre
+float64 x                        # m, dans [0, 11]
+float64 y                        # m, dans [0, 11]
 ---
 # Result
 bool success
 float64 final_distance           # m
-float64 final_heading_error      # rad
 builtin_interfaces/Duration elapsed
 ---
 # Feedback
 uint8 phase                      # mêmes valeurs que ControllerState.PHASE_*
 float64 distance_remaining       # m
-float64 heading_error            # rad
 ```
 
 ### 3.4 `CMakeLists.txt`
@@ -250,11 +244,11 @@ from turtle_interfaces.action import GoToPose
 
 state = ControllerState()
 state.header.stamp = self.get_clock().now().to_msg()
-state.phase = ControllerState.PHASE_POSITION
+state.phase = ControllerState.PHASE_MOVING
 state.rho = rho
 
-req = SetTarget.Request(x=8.0, y=8.0, theta=1.57)
-goal = GoToPose.Goal(x=8.0, y=8.0, theta=1.57)
+req = SetTarget.Request(x=8.0, y=8.0)
+goal = GoToPose.Goal(x=8.0, y=8.0)
 ```
 
 Une interface de service génère `SetTarget.Request` et `SetTarget.Response`. Une interface d'action génère `GoToPose.Goal`, `GoToPose.Result` et `GoToPose.Feedback`.
@@ -276,10 +270,10 @@ Une interface de service génère `SetTarget.Request` et `SetTarget.Response`. U
 
 1. Créez `turtle_interfaces` avec les trois fichiers de la section 3, compilez-le et vérifiez-le avec `ros2 interface show`.
 2. Ajoutez la dépendance dans `turtle_controller/package.xml`.
-3. Dans `pid_regulator`, remplacez les entiers de phase par les constantes `ControllerState.PHASE_*` (le chapitre 11 en dépend), puis publiez un `ControllerState` à chaque cycle sur le topic privé `~/state`.
-4. Tracez `rho` et `heading_error` :
+3. Dans `pid_regulator`, représentez l'état du régulateur (au repos, en déplacement, arrivé : tableau de synthèse du chapitre 06, § 7.5) par les constantes `ControllerState.PHASE_*` (le chapitre 11 en dépend), puis publiez un `ControllerState` à chaque cycle sur le topic privé `~/state`.
+4. Tracez `rho` et `alpha` :
    ```bash
-   ros2 run rqt_plot rqt_plot /pid_regulator/state/rho /pid_regulator/state/heading_error
+   ros2 run rqt_plot rqt_plot /pid_regulator/state/rho /pid_regulator/state/alpha
    ```
 5. Affichez uniquement la phase en cours :
    ```bash
@@ -295,7 +289,7 @@ Une interface de service génère `SetTarget.Request` et `SetTarget.Response`. U
 1. Pourquoi un package d'interfaces doit-il être de type `ament_cmake` ?
 2. Quel est le rôle de `<member_of_group>rosidl_interface_packages</member_of_group>` ?
 3. Vous ajoutez un champ `geometry_msgs/Point target` à `SetTarget.srv`. Quelles lignes de `CMakeLists.txt` et de `package.xml` vérifiez-vous ?
-4. Pourquoi est-il préférable d'utiliser `geometry_msgs/msg/PoseStamped` plutôt qu'un message personnalisé contenant `x`, `y`, `theta`, si l'on veut afficher la cible dans rviz2 ?
+4. Pourquoi est-il préférable d'utiliser `geometry_msgs/msg/PoseStamped` plutôt qu'un message personnalisé contenant `x` et `y`, si l'on veut afficher la cible dans rviz2 ?
 5. Quel est l'ordre des trois sections d'un fichier `.action` ?
 
 ## Références
