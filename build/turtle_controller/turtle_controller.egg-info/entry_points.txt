@@ -2,3 +2,4 @@
 counter_node = turtle_controller.counter_node:main
 hello_node = turtle_controller.hello_node:main
 pid_regulator = turtle_controller.pid_regulator:main
+turtle_pid.launch = turtle_controller.turtle_pid.launch:main
